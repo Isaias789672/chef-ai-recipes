@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -34,6 +34,10 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -50,17 +54,17 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        emerald: {
-          50: "hsl(var(--emerald-50))",
-          100: "hsl(var(--emerald-100))",
-          200: "hsl(var(--emerald-200))",
-          300: "hsl(var(--emerald-300))",
-          400: "hsl(var(--emerald-400))",
-          500: "hsl(var(--emerald-500))",
-          600: "hsl(var(--emerald-600))",
-          700: "hsl(var(--emerald-700))",
-          800: "hsl(var(--emerald-800))",
-          900: "hsl(var(--emerald-900))",
+        chef: {
+          dark: "hsl(var(--chef-dark))",
+          darker: "hsl(var(--chef-darker))",
+          light: "hsl(var(--chef-light))",
+          muted: "hsl(var(--chef-muted))",
+          accent: "hsl(var(--chef-accent))",
+        },
+        nutrition: {
+          protein: "hsl(var(--protein))",
+          carbs: "hsl(var(--carbs))",
+          fats: "hsl(var(--fats))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -87,20 +91,10 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "bounce-soft": {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-5px)" },
-        },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "bounce-soft": "bounce-soft 2s ease-in-out infinite",
-        shimmer: "shimmer 2s linear infinite",
       },
     },
   },

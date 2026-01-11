@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UtensilsCrossed, ChefHat, Clock, Users } from "lucide-react";
+import { UtensilsCrossed, Bookmark, Flame } from "lucide-react";
 import { ImageDropzone } from "@/components/ui/ImageDropzone";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Recipe } from "@/components/ui/RecipeCard";
@@ -12,39 +12,38 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [discoveredRecipe, setDiscoveredRecipe] = useState<Recipe | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [servings, setServings] = useState(1);
 
   const handleImageSelect = async (file: File) => {
     setUploadedImage(URL.createObjectURL(file));
     setIsAnalyzing(true);
     setDiscoveredRecipe(null);
     
-    // Simulating AI analysis
     await new Promise(resolve => setTimeout(resolve, 3000));
     
     const mockRecipe: Recipe = {
       id: crypto.randomUUID(),
-      name: "Tiramisù Clássico Italiano",
-      time: "45 min + 4h de geladeira",
-      difficulty: "Médio",
-      servings: 8,
+      name: "Salada Caesar com Tomate Cereja",
+      time: "25 min",
+      difficulty: "Fácil",
+      servings: 2,
+      calories: 330,
+      protein: 8,
+      carbs: 20,
+      fats: 18,
       ingredients: [
-        "500g de mascarpone",
-        "4 gemas de ovo",
-        "100g de açúcar",
-        "300ml de café espresso forte (frio)",
-        "3 colheres de sopa de licor de café (Kahlúa)",
-        "200g de biscoitos champagne (savoiardi)",
-        "Cacau em pó para polvilhar",
-        "Raspas de chocolate amargo"
+        "Alface romana • 20 cal",
+        "Parmesão ralado • 110 cal",
+        "Tomate cereja • 18 cal",
+        "Croutons • 122 cal",
+        "Molho Caesar • 60 cal"
       ],
       steps: [
-        "Prepare o café espresso forte e deixe esfriar. Adicione o licor.",
-        "Bata as gemas com o açúcar até obter um creme claro e fofo.",
-        "Adicione o mascarpone e misture delicadamente até ficar homogêneo.",
-        "Mergulhe rapidamente os biscoitos no café (não deixe encharcar).",
-        "Monte camadas: biscoitos, creme, biscoitos, creme.",
-        "Leve à geladeira por pelo menos 4 horas, ou de um dia para o outro.",
-        "Antes de servir, polvilhe generosamente com cacau em pó e raspas de chocolate."
+        "Lave e seque bem a alface, rasgando em pedaços.",
+        "Corte os tomates cereja ao meio.",
+        "Prepare os croutons tostando pão com azeite.",
+        "Monte a salada e regue com molho Caesar.",
+        "Finalize com parmesão ralado generosamente."
       ]
     };
     
@@ -55,106 +54,153 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
   const handleReset = () => {
     setDiscoveredRecipe(null);
     setUploadedImage(null);
+    setServings(1);
   };
 
   return (
     <div className="slide-up">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-          <UtensilsCrossed className="w-6 h-6 text-primary-foreground" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Descobrir Prato</h2>
-          <p className="text-sm text-muted-foreground">Envie uma foto de qualquer prato</p>
-        </div>
-      </div>
-
       {!discoveredRecipe && !isAnalyzing && (
-        <ImageDropzone 
-          onImageSelect={handleImageSelect}
-          title="Fotografe o prato"
-          subtitle="Descubra como recriar em casa"
-        />
+        <ImageDropzone onImageSelect={handleImageSelect} />
       )}
 
       {isAnalyzing && (
         <LoadingState 
           message="Identificando o prato..."
-          submessage="Analisando ingredientes e técnicas"
+          submessage="Analisando ingredientes e calorias"
         />
       )}
 
       {discoveredRecipe && !isAnalyzing && (
-        <div className="space-y-6">
+        <div className="space-y-4 fade-in">
+          {/* Phone mockup with image */}
           {uploadedImage && (
-            <div className="rounded-2xl overflow-hidden shadow-card">
+            <div className="relative rounded-[2rem] overflow-hidden bg-chef-dark">
               <img 
                 src={uploadedImage} 
-                alt="Prato enviado" 
-                className="w-full aspect-video object-cover"
+                alt="Prato" 
+                className="w-full aspect-[4/3] object-cover"
               />
+              
+              {/* Header */}
+              <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
+                <button
+                  onClick={handleReset}
+                  className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center text-white"
+                >
+                  ←
+                </button>
+                <span className="text-white font-medium">Nutrição</span>
+                <div className="flex gap-2">
+                  <button className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center text-white">
+                    ↗
+                  </button>
+                  <button className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center text-white">
+                    •••
+                  </button>
+                </div>
+              </div>
+
+              {/* Bottom card overlay */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 pt-12">
+                <div className="flex items-center gap-2 text-white/80 text-sm mb-1">
+                  <Bookmark className="w-4 h-4" />
+                  <span>18:30</span>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="p-5 rounded-2xl bg-card shadow-card">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
-                <ChefHat className="w-5 h-5 text-primary" />
+          {/* Recipe info card */}
+          <div className="bg-card rounded-2xl p-5 shadow-card">
+            {/* Title and servings */}
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="font-semibold text-lg text-foreground pr-4">
+                {discoveredRecipe.name}
+              </h3>
+              <div className="flex items-center gap-2 bg-muted rounded-full p-1">
+                <button 
+                  onClick={() => setServings(Math.max(1, servings - 1))}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-card transition-colors"
+                >
+                  −
+                </button>
+                <span className="w-6 text-center font-medium text-sm">{servings}</span>
+                <button 
+                  onClick={() => setServings(servings + 1)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-card transition-colors"
+                >
+                  +
+                </button>
               </div>
-              <div>
-                <h3 className="font-bold text-lg text-foreground">{discoveredRecipe.name}</h3>
-                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {discoveredRecipe.time}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    {discoveredRecipe.servings} porções
-                  </span>
+            </div>
+
+            {/* Calories card */}
+            <div className="bg-muted rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-card flex items-center justify-center shadow-sm">
+                  <Flame className="w-5 h-5 text-foreground" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Calorias</p>
+                  <p className="text-3xl font-bold text-foreground">{discoveredRecipe.calories! * servings}</p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-foreground mb-2">Ingredientes</h4>
-                <ul className="space-y-1.5">
-                  {discoveredRecipe.ingredients.map((ingredient, i) => (
-                    <li key={i} className="flex items-center gap-2 text-muted-foreground">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      {ingredient}
-                    </li>
-                  ))}
-                </ul>
+            {/* Macros */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="text-center p-3 rounded-xl border border-nutrition-protein/20 bg-nutrition-protein/5">
+                <p className="text-xs text-nutrition-protein mb-1">🥩 Proteína</p>
+                <p className="font-bold text-foreground">{discoveredRecipe.protein! * servings}g</p>
               </div>
-
-              <div>
-                <h4 className="font-semibold text-foreground mb-2">Modo de Preparo</h4>
-                <ol className="space-y-3">
-                  {discoveredRecipe.steps.map((step, i) => (
-                    <li key={i} className="flex gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-medium flex items-center justify-center">
-                        {i + 1}
-                      </span>
-                      <span className="text-muted-foreground pt-0.5">{step}</span>
-                    </li>
-                  ))}
-                </ol>
+              <div className="text-center p-3 rounded-xl border border-nutrition-carbs/20 bg-nutrition-carbs/5">
+                <p className="text-xs text-nutrition-carbs mb-1">🌾 Carbos</p>
+                <p className="font-bold text-foreground">{discoveredRecipe.carbs! * servings}g</p>
+              </div>
+              <div className="text-center p-3 rounded-xl border border-nutrition-fats/20 bg-nutrition-fats/5">
+                <p className="text-xs text-nutrition-fats mb-1">💧 Gorduras</p>
+                <p className="font-bold text-foreground">{discoveredRecipe.fats! * servings}g</p>
               </div>
             </div>
 
-            <button
-              onClick={() => onAddToMenu(discoveredRecipe)}
-              className="mt-6 w-full py-3 rounded-xl gradient-hero text-primary-foreground font-semibold shadow-soft hover:opacity-90 transition-opacity"
-            >
-              Adicionar ao Menu Semanal
-            </button>
+            {/* Pagination dots */}
+            <div className="flex justify-center gap-1.5 mb-4">
+              <div className="w-2 h-2 rounded-full bg-chef-dark" />
+              <div className="w-2 h-2 rounded-full bg-muted" />
+            </div>
+
+            {/* Ingredients */}
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-foreground">Ingredientes</h4>
+              <button className="text-sm text-chef-accent font-medium">+ Adicionar</button>
+            </div>
+            
+            <div className="space-y-2 mb-6">
+              {discoveredRecipe.ingredients.map((ing, i) => (
+                <div key={i} className="flex items-center justify-between py-2 px-3 bg-muted rounded-xl">
+                  <span className="text-sm text-foreground">{ing.split('•')[0]}</span>
+                  <span className="text-xs text-muted-foreground">{ing.split('•')[1] || ''}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button className="flex-1 py-3 rounded-xl border border-border text-foreground font-medium text-sm hover:bg-muted transition-colors flex items-center justify-center gap-2">
+                + Corrigir Resultados
+              </button>
+              <button 
+                onClick={() => onAddToMenu(discoveredRecipe)}
+                className="flex-1 py-3 rounded-xl bg-chef-dark text-white font-medium text-sm shadow-button hover:opacity-90 transition-opacity"
+              >
+                Salvar
+              </button>
+            </div>
           </div>
 
           <button
             onClick={handleReset}
-            className="w-full py-3 rounded-xl border-2 border-border text-foreground font-medium hover:bg-muted transition-colors"
+            className="w-full py-3 rounded-xl border border-border text-foreground font-medium hover:bg-muted transition-colors"
           >
             Descobrir outro prato
           </button>

@@ -1,4 +1,4 @@
-import { Clock, ChefHat, Users, Trash2, Plus } from "lucide-react";
+import { Clock, ChefHat, Users, Trash2, Plus, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface Recipe {
@@ -8,6 +8,10 @@ export interface Recipe {
   time: string;
   difficulty: "Fácil" | "Médio" | "Difícil";
   servings: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
   ingredients: string[];
   steps: string[];
 }
@@ -21,12 +25,6 @@ interface RecipeCardProps {
   className?: string;
 }
 
-const difficultyColors = {
-  "Fácil": "bg-emerald-100 text-emerald-700",
-  "Médio": "bg-amber-100 text-amber-700",
-  "Difícil": "bg-rose-100 text-rose-700",
-};
-
 export function RecipeCard({ 
   recipe, 
   onClick, 
@@ -39,8 +37,9 @@ export function RecipeCard({
     <div 
       onClick={onClick}
       className={cn(
-        "group relative bg-card rounded-2xl overflow-hidden shadow-card transition-all duration-300 hover:shadow-elevated cursor-pointer",
-        compact ? "flex items-center gap-4 p-3" : "",
+        "group bg-card rounded-2xl overflow-hidden shadow-card transition-all duration-300 hover:shadow-elevated",
+        compact ? "flex items-center gap-3 p-3" : "",
+        onClick ? "cursor-pointer" : "",
         className
       )}
     >
@@ -51,26 +50,37 @@ export function RecipeCard({
               <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-accent">
-                <ChefHat className="w-6 h-6 text-primary" />
+                <ChefHat className="w-6 h-6 text-muted-foreground" />
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-foreground truncate">{recipe.name}</h4>
-            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
+            <h4 className="font-semibold text-foreground truncate text-sm">{recipe.name}</h4>
+            <div className="flex items-center gap-3 mt-1">
+              {recipe.calories && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Flame className="w-3 h-3" />
+                  {recipe.calories} cal
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3 h-3" />
                 {recipe.time}
               </span>
-              <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", difficultyColors[recipe.difficulty])}>
-                {recipe.difficulty}
-              </span>
             </div>
+            {/* Nutrition micro stats */}
+            {recipe.protein && (
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-[10px] text-nutrition-protein">🥩 {recipe.protein}g</span>
+                <span className="text-[10px] text-nutrition-carbs">🌾 {recipe.carbs}g</span>
+                <span className="text-[10px] text-nutrition-fats">💧 {recipe.fats}g</span>
+              </div>
+            )}
           </div>
           {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+              className="p-2 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -78,7 +88,7 @@ export function RecipeCard({
         </>
       ) : (
         <>
-          <div className="aspect-[4/3] overflow-hidden bg-muted">
+          <div className="aspect-[4/3] overflow-hidden bg-muted relative">
             {recipe.image ? (
               <img 
                 src={recipe.image} 
@@ -86,44 +96,82 @@ export function RecipeCard({
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent to-secondary">
-                <ChefHat className="w-12 h-12 text-primary/50" />
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-accent">
+                <ChefHat className="w-12 h-12 text-muted-foreground/50" />
               </div>
             )}
           </div>
           
           <div className="p-4">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <h3 className="font-semibold text-lg text-foreground leading-tight line-clamp-2">
-                {recipe.name}
-              </h3>
-              <span className={cn(
-                "flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium",
-                difficultyColors[recipe.difficulty]
-              )}>
-                {recipe.difficulty}
-              </span>
-            </div>
+            <h3 className="font-semibold text-foreground leading-tight line-clamp-2 mb-2">
+              {recipe.name}
+            </h3>
+
+            {/* Calories card */}
+            {recipe.calories && (
+              <div className="bg-muted rounded-xl p-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-card flex items-center justify-center shadow-sm">
+                    <Flame className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Calorias</p>
+                    <p className="text-xl font-bold text-foreground">{recipe.calories}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Nutrition stats */}
+            {recipe.protein && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="text-center p-2 rounded-lg bg-nutrition-protein/10">
+                  <p className="text-[10px] text-nutrition-protein flex items-center justify-center gap-1">
+                    🥩 Proteína
+                  </p>
+                  <p className="font-semibold text-sm">{recipe.protein}g</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-nutrition-carbs/10">
+                  <p className="text-[10px] text-nutrition-carbs flex items-center justify-center gap-1">
+                    🌾 Carbos
+                  </p>
+                  <p className="font-semibold text-sm">{recipe.carbs}g</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-nutrition-fats/10">
+                  <p className="text-[10px] text-nutrition-fats flex items-center justify-center gap-1">
+                    💧 Gorduras
+                  </p>
+                  <p className="font-semibold text-sm">{recipe.fats}g</p>
+                </div>
+              </div>
+            )}
             
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" />
                 {recipe.time}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Users className="w-4 h-4" />
+              <span className="flex items-center gap-1">
+                <Users className="w-3.5 h-3.5" />
                 {recipe.servings} porções
               </span>
             </div>
 
             {onAddToMenu && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onAddToMenu(); }}
-                className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-accent-foreground font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar ao Menu
-              </button>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={(e) => { e.stopPropagation(); }}
+                  className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm hover:bg-muted transition-colors"
+                >
+                  + Corrigir
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onAddToMenu(); }}
+                  className="flex-1 py-2.5 rounded-xl bg-chef-dark text-white font-medium text-sm shadow-button hover:opacity-90 transition-opacity"
+                >
+                  Salvar
+                </button>
+              </div>
             )}
           </div>
         </>
