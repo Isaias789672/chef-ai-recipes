@@ -89,7 +89,7 @@ const AdminPanel = () => {
           email,
           evento,
           produto,
-          token: "d3wjcxw0hpn",
+          token: "m1bft6fb7oo",
         }),
       });
 

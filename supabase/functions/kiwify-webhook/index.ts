@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const VALID_TOKEN = 'd3wjcxw0hpn';
+const VALID_TOKEN = 'm1bft6fb7oo';
 
 interface KiwifyWebhookPayload {
   email: string;
