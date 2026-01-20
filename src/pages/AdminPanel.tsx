@@ -89,7 +89,7 @@ const AdminPanel = () => {
           email,
           evento,
           produto,
-          token: "m1bft6fb7oo",
+          token: "hicptshjzqo",
         }),
       });
 
@@ -156,7 +156,7 @@ const AdminPanel = () => {
               Copie esta URL e cadastre na Kiwify para receber eventos
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="flex gap-2">
               <Input
                 value={webhookUrl}
@@ -170,6 +170,10 @@ const AdminPanel = () => {
               >
                 <Copy className="h-4 w-4" />
               </Button>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-600">Token de segurança:</span>
+              <code className="bg-gray-100 px-2 py-1 rounded font-mono text-green-700">hicptshjzqo</code>
             </div>
           </CardContent>
         </Card>
@@ -205,7 +209,7 @@ const AdminPanel = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="assinatura aprovada">
-                      Assinatura Aprovada
+                      Compra Aprovada
                     </SelectItem>
                     <SelectItem value="assinatura renovada">
                       Assinatura Renovada
@@ -215,6 +219,12 @@ const AdminPanel = () => {
                     </SelectItem>
                     <SelectItem value="assinatura atrasada">
                       Assinatura Atrasada
+                    </SelectItem>
+                    <SelectItem value="pix gerado">
+                      Pix Gerado
+                    </SelectItem>
+                    <SelectItem value="reembolso">
+                      Reembolso
                     </SelectItem>
                   </SelectContent>
                 </Select>
