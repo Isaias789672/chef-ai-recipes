@@ -1,15 +1,21 @@
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Hand, Sparkles } from "lucide-react";
 import { ImageDropzone } from "@/components/ui/ImageDropzone";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { RecipeCard, Recipe } from "@/components/ui/RecipeCard";
+import { IngredientChecklist } from "@/components/ui/IngredientChecklist";
+import { PremiumFilters, PremiumFiltersState } from "@/components/ui/PremiumFilters";
+import { HandsFreeMode } from "@/components/ui/HandsFreeMode";
+import { ChefModifierButton } from "@/components/ui/ChefModifierButton";
 import { analyzeImage } from "@/lib/api/analyzeImage";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface FridgeScannerProps {
   onAddToMenu: (recipe: Recipe) => void;
 }
 
+type ScannerStep = "upload" | "checklist" | "loading" | "result";
 type LoadingStep = { id: string; text: string; status: "pending" | "active" | "completed" };
 
 const LOADING_STEPS: LoadingStep[] = [
@@ -20,17 +26,23 @@ const LOADING_STEPS: LoadingStep[] = [
 ];
 
 export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [step, setStep] = useState<ScannerStep>("upload");
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [detectedIngredients, setDetectedIngredients] = useState<string[]>([]);
   const [loadingSteps, setLoadingSteps] = useState(LOADING_STEPS);
   const [progress, setProgress] = useState(0);
+  const [showHandsFree, setShowHandsFree] = useState(false);
+  const [filters, setFilters] = useState<PremiumFiltersState>({
+    diet: null,
+    time: null,
+    goal: null,
+  });
   const { toast } = useToast();
 
   const updateStep = (stepIndex: number, status: "active" | "completed") => {
-    setLoadingSteps(prev => prev.map((step, idx) => ({
-      ...step,
+    setLoadingSteps(prev => prev.map((s, idx) => ({
+      ...s,
       status: idx < stepIndex ? "completed" : idx === stepIndex ? status : "pending"
     })));
     setProgress(((stepIndex + (status === "completed" ? 1 : 0.5)) / LOADING_STEPS.length) * 100);
@@ -38,11 +50,9 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
 
   const handleImageSelect = async (file: File) => {
     setUploadedImage(URL.createObjectURL(file));
-    setIsAnalyzing(true);
-    setGeneratedRecipe(null);
-    setDetectedIngredients([]);
     setLoadingSteps(LOADING_STEPS.map(s => ({ ...s, status: "pending" as const })));
     setProgress(0);
+    setStep("loading");
     
     // Step 1: Uploading
     updateStep(0, "active");
@@ -52,7 +62,7 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
     // Step 2: Identifying
     updateStep(1, "active");
     
-    // Call AI API
+    // Call AI API for ingredient detection
     const result = await analyzeImage(file, "fridge");
     
     if (result.error) {
@@ -61,34 +71,66 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
         description: result.error,
         variant: "destructive",
       });
-      setIsAnalyzing(false);
+      setStep("upload");
       setUploadedImage(null);
       return;
     }
     
     updateStep(1, "completed");
     
-    // Step 3: Combining
+    // Show checklist for ingredient confirmation
+    if (result.ingredients && result.ingredients.length > 0) {
+      setDetectedIngredients(result.ingredients);
+      setStep("checklist");
+    } else if (result.recipe) {
+      // Fallback: no ingredients detected but recipe generated
+      setGeneratedRecipe(result.recipe);
+      setDetectedIngredients(result.recipe.ingredients);
+      updateStep(2, "completed");
+      updateStep(3, "completed");
+      setStep("result");
+    }
+  };
+
+  const handleConfirmIngredients = async (selectedIngredients: string[]) => {
+    setDetectedIngredients(selectedIngredients);
+    setStep("loading");
+    
     updateStep(2, "active");
     await new Promise(resolve => setTimeout(resolve, 400));
     updateStep(2, "completed");
     
-    // Step 4: Generating
     updateStep(3, "active");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    updateStep(3, "completed");
     
-    if (result.recipe) {
-      setGeneratedRecipe(result.recipe);
-      if (result.ingredients) {
-        setDetectedIngredients(result.ingredients);
+    // Generate recipe with filters
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-recipe", {
+        body: {
+          ingredients: selectedIngredients,
+          filters,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.recipe) {
+        setGeneratedRecipe(data.recipe);
       }
+    } catch (err) {
+      console.error("Recipe generation error:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar a receita",
+        variant: "destructive",
+      });
     }
     
-    setIsAnalyzing(false);
+    updateStep(3, "completed");
+    setStep("result");
   };
 
   const handleReset = () => {
+    setStep("upload");
     setGeneratedRecipe(null);
     setUploadedImage(null);
     setDetectedIngredients([]);
@@ -96,27 +138,52 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
     setProgress(0);
   };
 
+  const handleModifyRecipe = (recipe: Recipe) => {
+    toast({
+      title: "Chef Modificador",
+      description: "Abrindo modificador de receitas premium...",
+    });
+    // Future: Open recipe modification modal
+  };
+
   return (
     <div className="page-enter">
+      {/* Hands-Free Mode */}
+      {showHandsFree && generatedRecipe && (
+        <HandsFreeMode
+          recipe={generatedRecipe}
+          onClose={() => setShowHandsFree(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Scanner de Geladeira</h1>
-        <p className="text-muted-foreground mt-1">
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-2xl font-bold text-foreground">Scanner de Geladeira</h1>
+          <span className="px-2 py-0.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold">
+            Premium
+          </span>
+        </div>
+        <p className="text-muted-foreground">
           Fotografe seus ingredientes e a IA criará uma receita personalizada
         </p>
       </div>
 
-      {!generatedRecipe && !isAnalyzing && (
-        <ImageDropzone 
-          onImageSelect={handleImageSelect}
-          title="Fotografe seus ingredientes"
-          subtitle="A IA vai analisar e criar uma receita"
-        />
+      {/* Upload Step */}
+      {step === "upload" && (
+        <div className="space-y-4">
+          <PremiumFilters filters={filters} onChange={setFilters} />
+          <ImageDropzone 
+            onImageSelect={handleImageSelect}
+            title="Fotografe seus ingredientes"
+            subtitle="A IA vai analisar e criar uma receita"
+          />
+        </div>
       )}
 
-      {isAnalyzing && (
+      {/* Loading Step */}
+      {step === "loading" && (
         <div className="space-y-6 fade-in">
-          {/* Uploaded Image Preview */}
           {uploadedImage && (
             <div className="relative rounded-3xl overflow-hidden aspect-video">
               <img 
@@ -132,12 +199,33 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
               </div>
             </div>
           )}
-
           <LoadingState steps={loadingSteps} progress={progress} />
         </div>
       )}
 
-      {generatedRecipe && !isAnalyzing && (
+      {/* Checklist Step */}
+      {step === "checklist" && (
+        <div className="space-y-4 fade-in">
+          {uploadedImage && (
+            <div className="relative rounded-3xl overflow-hidden aspect-video">
+              <img 
+                src={uploadedImage} 
+                alt="Ingredientes" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          <PremiumFilters filters={filters} onChange={setFilters} />
+          <IngredientChecklist
+            ingredients={detectedIngredients}
+            onConfirm={handleConfirmIngredients}
+            onCancel={handleReset}
+          />
+        </div>
+      )}
+
+      {/* Result Step */}
+      {step === "result" && generatedRecipe && (
         <div className="space-y-6 fade-in">
           {/* Back Button */}
           <button
@@ -156,10 +244,9 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
                 alt="Ingredientes" 
                 className="w-full h-full object-cover"
               />
-              {/* Detected ingredients overlay */}
               {detectedIngredients.length > 0 && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <p className="text-white/80 text-xs mb-2">Ingredientes detectados:</p>
+                  <p className="text-white/80 text-xs mb-2">Ingredientes utilizados:</p>
                   <div className="flex flex-wrap gap-2">
                     {detectedIngredients.slice(0, 6).map((ing, i) => (
                       <span key={i} className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
@@ -181,6 +268,21 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
           <RecipeCard 
             recipe={generatedRecipe}
             onAddToMenu={() => onAddToMenu(generatedRecipe)}
+          />
+
+          {/* Hands-Free Button */}
+          <button
+            onClick={() => setShowHandsFree(true)}
+            className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl font-semibold shadow-lg hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+          >
+            <Hand className="w-5 h-5" />
+            Iniciar Cozinha (Mãos Livres)
+          </button>
+
+          {/* Chef Modifier Button */}
+          <ChefModifierButton
+            recipe={generatedRecipe}
+            onModify={handleModifyRecipe}
           />
         </div>
       )}

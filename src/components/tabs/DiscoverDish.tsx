@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Hand } from "lucide-react";
 import { ImageDropzone } from "@/components/ui/ImageDropzone";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { RecipeCard, Recipe } from "@/components/ui/RecipeCard";
+import { HandsFreeMode } from "@/components/ui/HandsFreeMode";
+import { ChefModifierButton } from "@/components/ui/ChefModifierButton";
 import { analyzeImage } from "@/lib/api/analyzeImage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,10 +15,10 @@ interface DiscoverDishProps {
 type LoadingStep = { id: string; text: string; status: "pending" | "active" | "completed" };
 
 const LOADING_STEPS: LoadingStep[] = [
-  { id: "1", text: "Enviando imagem para análise...", status: "pending" },
-  { id: "2", text: "Identificando o prato com IA...", status: "pending" },
-  { id: "3", text: "Analisando ingredientes visíveis...", status: "pending" },
-  { id: "4", text: "Montando receita detalhada...", status: "pending" },
+  { id: "1", text: "Enviando imagem...", status: "pending" },
+  { id: "2", text: "Identificando prato com IA...", status: "pending" },
+  { id: "3", text: "Analisando ingredientes...", status: "pending" },
+  { id: "4", text: "Gerando receita completa...", status: "pending" },
 ];
 
 export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
@@ -26,6 +28,7 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
   const [dishName, setDishName] = useState<string | null>(null);
   const [loadingSteps, setLoadingSteps] = useState(LOADING_STEPS);
   const [progress, setProgress] = useState(0);
+  const [showHandsFree, setShowHandsFree] = useState(false);
   const { toast } = useToast();
 
   const updateStep = (stepIndex: number, status: "active" | "completed") => {
@@ -43,18 +46,17 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
     setDishName(null);
     setLoadingSteps(LOADING_STEPS.map(s => ({ ...s, status: "pending" as const })));
     setProgress(0);
-    
+
     // Step 1: Uploading
     updateStep(0, "active");
     await new Promise(resolve => setTimeout(resolve, 500));
     updateStep(0, "completed");
-    
-    // Step 2: Identifying
+
+    // Step 2: Identifying dish
     updateStep(1, "active");
-    
-    // Call AI API
+
     const result = await analyzeImage(file, "dish");
-    
+
     if (result.error) {
       toast({
         title: "Erro na análise",
@@ -65,26 +67,24 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
       setUploadedImage(null);
       return;
     }
-    
+
     updateStep(1, "completed");
-    
+
     // Step 3: Analyzing
     updateStep(2, "active");
     await new Promise(resolve => setTimeout(resolve, 400));
     updateStep(2, "completed");
-    
-    // Step 4: Generating
+
+    // Step 4: Generating recipe
     updateStep(3, "active");
     await new Promise(resolve => setTimeout(resolve, 400));
     updateStep(3, "completed");
-    
+
     if (result.recipe) {
       setDiscoveredRecipe(result.recipe);
-      if (result.dishName) {
-        setDishName(result.dishName);
-      }
+      setDishName(result.dishName || result.recipe.name);
     }
-    
+
     setIsAnalyzing(false);
   };
 
@@ -96,27 +96,41 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
     setProgress(0);
   };
 
+  const handleModifyRecipe = (recipe: Recipe) => {
+    toast({
+      title: "Chef Modificador",
+      description: "Abrindo modificador de receitas premium...",
+    });
+  };
+
   return (
     <div className="page-enter">
+      {/* Hands-Free Mode */}
+      {showHandsFree && discoveredRecipe && (
+        <HandsFreeMode
+          recipe={discoveredRecipe}
+          onClose={() => setShowHandsFree(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Descobrir Prato</h1>
         <p className="text-muted-foreground mt-1">
-          Fotografe qualquer prato e a IA revelará a receita
+          Fotografe um prato e descubra como prepará-lo
         </p>
       </div>
 
       {!discoveredRecipe && !isAnalyzing && (
         <ImageDropzone 
           onImageSelect={handleImageSelect}
-          title="Fotografe o prato"
-          subtitle="A IA vai identificar e revelar a receita"
+          title="Fotografe um prato"
+          subtitle="A IA vai identificar e criar a receita"
         />
       )}
 
       {isAnalyzing && (
         <div className="space-y-6 fade-in">
-          {/* Uploaded Image Preview */}
           {uploadedImage && (
             <div className="relative rounded-3xl overflow-hidden aspect-video">
               <img 
@@ -132,7 +146,6 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
               </div>
             </div>
           )}
-
           <LoadingState steps={loadingSteps} progress={progress} />
         </div>
       )}
@@ -153,17 +166,13 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
             <div className="rounded-3xl overflow-hidden aspect-video relative">
               <img 
                 src={uploadedImage} 
-                alt="Prato descoberto" 
+                alt="Prato identificado" 
                 className="w-full h-full object-cover"
               />
-              {dishName && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    <span className="text-white font-semibold">Identificado: {dishName}</span>
-                  </div>
-                </div>
-              )}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                <p className="text-white/80 text-xs mb-1">Prato identificado:</p>
+                <p className="text-white text-xl font-bold">{dishName}</p>
+              </div>
             </div>
           )}
 
@@ -171,6 +180,21 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
           <RecipeCard 
             recipe={discoveredRecipe}
             onAddToMenu={() => onAddToMenu(discoveredRecipe)}
+          />
+
+          {/* Hands-Free Button */}
+          <button
+            onClick={() => setShowHandsFree(true)}
+            className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl font-semibold shadow-lg hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+          >
+            <Hand className="w-5 h-5" />
+            Iniciar Cozinha (Mãos Livres)
+          </button>
+
+          {/* Chef Modifier Button */}
+          <ChefModifierButton
+            recipe={discoveredRecipe}
+            onModify={handleModifyRecipe}
           />
         </div>
       )}

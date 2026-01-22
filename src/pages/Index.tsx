@@ -4,18 +4,21 @@ import {
   ChefHat, 
   Calendar, 
   ShoppingCart,
-  Leaf
+  Leaf,
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FridgeScanner } from "@/components/tabs/FridgeScanner";
 import { DiscoverDish } from "@/components/tabs/DiscoverDish";
 import { WeeklyMenu } from "@/components/tabs/WeeklyMenu";
 import { ShoppingList } from "@/components/tabs/ShoppingList";
+import { ChatAI } from "@/components/tabs/ChatAI";
 import { Recipe } from "@/components/ui/RecipeCard";
 
 const tabs = [
   { id: "scanner", label: "Scanner", icon: Refrigerator },
   { id: "discover", label: "Descobrir", icon: ChefHat },
+  { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "menu", label: "Menu", icon: Calendar },
   { id: "shopping", label: "Compras", icon: ShoppingCart },
 ] as const;
@@ -76,6 +79,8 @@ const Index = () => {
         return <FridgeScanner onAddToMenu={handleAddToMenu} />;
       case "discover":
         return <DiscoverDish onAddToMenu={handleAddToMenu} />;
+      case "chat":
+        return <ChatAI onAddToMenu={handleAddToMenu} />;
       case "menu":
         return <WeeklyMenu recipes={savedRecipes} onRemoveRecipe={handleRemoveRecipe} />;
       case "shopping":
@@ -108,6 +113,7 @@ const Index = () => {
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              const isChat = tab.id === "chat";
               return (
                 <li key={tab.id}>
                   <button
@@ -115,12 +121,19 @@ const Index = () => {
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all",
                       isActive 
-                        ? "bg-primary text-primary-foreground shadow-button" 
+                        ? isChat 
+                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                          : "bg-primary text-primary-foreground shadow-button" 
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     )}
                   >
                     <Icon className="w-5 h-5" />
                     <span>{tab.label}</span>
+                    {isChat && !isActive && (
+                      <span className="ml-auto px-2 py-0.5 text-[10px] bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold">
+                        AI
+                      </span>
+                    )}
                   </button>
                 </li>
               );
@@ -149,24 +162,35 @@ const Index = () => {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+            const isChat = tab.id === "chat";
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2 px-4 rounded-2xl transition-all duration-200",
+                  "flex flex-col items-center gap-1 py-2 px-3 rounded-2xl transition-all duration-200",
                   isActive 
-                    ? "bg-primary/10" 
+                    ? isChat 
+                      ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20"
+                      : "bg-primary/10" 
                     : "text-muted-foreground"
                 )}
               >
                 <Icon className={cn(
                   "w-6 h-6 transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  isActive 
+                    ? isChat 
+                      ? "text-purple-500" 
+                      : "text-primary" 
+                    : "text-muted-foreground"
                 )} />
                 <span className={cn(
                   "text-[10px] font-semibold transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  isActive 
+                    ? isChat 
+                      ? "text-purple-500" 
+                      : "text-primary" 
+                    : "text-muted-foreground"
                 )}>
                   {tab.label}
                 </span>
