@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Paywall from "./components/Paywall";
@@ -11,8 +11,7 @@ import AdminPanel from "./pages/AdminPanel";
 
 const queryClient = new QueryClient();
 
-const AppContent = () => {
-  const location = useLocation();
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isUnlocked, setIsUnlocked] = useState(() => {
     return localStorage.getItem("chef-ai-unlocked") === "true";
   });
@@ -22,22 +21,11 @@ const AppContent = () => {
     setIsUnlocked(true);
   };
 
-  // Admin route is always accessible
-  if (location.pathname === "/admin") {
-    return <AdminPanel />;
-  }
-
-  // Show paywall for non-unlocked users
   if (!isUnlocked) {
     return <Paywall onUnlock={handleUnlock} />;
   }
 
-  return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
+  return <>{children}</>;
 };
 
 const App = () => {
@@ -47,7 +35,21 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppContent />
+          <Routes>
+            {/* Admin route - always accessible */}
+            <Route path="/admin" element={<AdminPanel />} />
+            
+            {/* Protected app routes */}
+            <Route path="/" element={<ProtectedRoute><Index defaultTab="scanner" /></ProtectedRoute>} />
+            <Route path="/scanner" element={<ProtectedRoute><Index defaultTab="scanner" /></ProtectedRoute>} />
+            <Route path="/descobrir" element={<ProtectedRoute><Index defaultTab="discover" /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><Index defaultTab="chat" /></ProtectedRoute>} />
+            <Route path="/menu" element={<ProtectedRoute><Index defaultTab="menu" /></ProtectedRoute>} />
+            <Route path="/compras" element={<ProtectedRoute><Index defaultTab="shopping" /></ProtectedRoute>} />
+            
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

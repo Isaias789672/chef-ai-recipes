@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Refrigerator, 
   ChefHat, 
@@ -16,14 +17,18 @@ import { ChatAI } from "@/components/tabs/ChatAI";
 import { Recipe } from "@/components/ui/RecipeCard";
 
 const tabs = [
-  { id: "scanner", label: "Scanner", icon: Refrigerator },
-  { id: "discover", label: "Descobrir", icon: ChefHat },
-  { id: "chat", label: "Chat", icon: MessageCircle },
-  { id: "menu", label: "Menu", icon: Calendar },
-  { id: "shopping", label: "Compras", icon: ShoppingCart },
+  { id: "scanner", label: "Scanner", icon: Refrigerator, path: "/scanner" },
+  { id: "discover", label: "Descobrir", icon: ChefHat, path: "/descobrir" },
+  { id: "chat", label: "Chat", icon: MessageCircle, path: "/chat" },
+  { id: "menu", label: "Menu", icon: Calendar, path: "/menu" },
+  { id: "shopping", label: "Compras", icon: ShoppingCart, path: "/compras" },
 ] as const;
 
 type TabId = typeof tabs[number]["id"];
+
+interface IndexProps {
+  defaultTab?: TabId;
+}
 
 // Sample recipes for demo
 const sampleRecipes: Recipe[] = [
@@ -59,9 +64,18 @@ const sampleRecipes: Recipe[] = [
   }
 ];
 
-const Index = () => {
-  const [activeTab, setActiveTab] = useState<TabId>("scanner");
+const Index = ({ defaultTab = "scanner" }: IndexProps) => {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabId>(defaultTab);
   const [savedRecipes, setSavedRecipes] = useState<Recipe[]>(sampleRecipes);
+
+  const handleTabChange = (tabId: TabId) => {
+    setActiveTab(tabId);
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab) {
+      navigate(tab.path);
+    }
+  };
 
   const handleAddToMenu = (recipe: Recipe) => {
     if (!savedRecipes.find(r => r.id === recipe.id)) {
@@ -117,7 +131,7 @@ const Index = () => {
               return (
                 <li key={tab.id}>
                   <button
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => handleTabChange(tab.id)}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all",
                       isActive 
@@ -166,7 +180,7 @@ const Index = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={cn(
                   "flex flex-col items-center gap-1 py-2 px-3 rounded-2xl transition-all duration-200",
                   isActive 
