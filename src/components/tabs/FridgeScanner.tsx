@@ -7,6 +7,7 @@ import { IngredientChecklist } from "@/components/ui/IngredientChecklist";
 import { PremiumFilters, PremiumFiltersState } from "@/components/ui/PremiumFilters";
 import { HandsFreeMode } from "@/components/ui/HandsFreeMode";
 import { ChefModifierButton } from "@/components/ui/ChefModifierButton";
+import { ChefModifierModal } from "@/components/ui/ChefModifierModal";
 import { analyzeImage } from "@/lib/api/analyzeImage";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
   const [loadingSteps, setLoadingSteps] = useState(LOADING_STEPS);
   const [progress, setProgress] = useState(0);
   const [showHandsFree, setShowHandsFree] = useState(false);
+  const [showChefModifier, setShowChefModifier] = useState(false);
   const [filters, setFilters] = useState<PremiumFiltersState>({
     diet: null,
     time: null,
@@ -139,15 +141,24 @@ export function FridgeScanner({ onAddToMenu }: FridgeScannerProps) {
   };
 
   const handleModifyRecipe = (recipe: Recipe) => {
-    toast({
-      title: "Chef Modificador",
-      description: "Abrindo modificador de receitas premium...",
-    });
-    // Future: Open recipe modification modal
+    setShowChefModifier(true);
+  };
+
+  const handleRecipeModified = (newRecipe: Recipe) => {
+    setGeneratedRecipe(newRecipe);
   };
 
   return (
     <div className="page-enter">
+      {/* Chef Modifier Modal */}
+      {showChefModifier && generatedRecipe && (
+        <ChefModifierModal
+          recipe={generatedRecipe}
+          onClose={() => setShowChefModifier(false)}
+          onRecipeModified={handleRecipeModified}
+        />
+      )}
+
       {/* Hands-Free Mode */}
       {showHandsFree && generatedRecipe && (
         <HandsFreeMode

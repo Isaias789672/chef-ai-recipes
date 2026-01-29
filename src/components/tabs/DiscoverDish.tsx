@@ -5,6 +5,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { RecipeCard, Recipe } from "@/components/ui/RecipeCard";
 import { HandsFreeMode } from "@/components/ui/HandsFreeMode";
 import { ChefModifierButton } from "@/components/ui/ChefModifierButton";
+import { ChefModifierModal } from "@/components/ui/ChefModifierModal";
 import { analyzeImage } from "@/lib/api/analyzeImage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,6 +30,7 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
   const [loadingSteps, setLoadingSteps] = useState(LOADING_STEPS);
   const [progress, setProgress] = useState(0);
   const [showHandsFree, setShowHandsFree] = useState(false);
+  const [showChefModifier, setShowChefModifier] = useState(false);
   const { toast } = useToast();
 
   const updateStep = (stepIndex: number, status: "active" | "completed") => {
@@ -97,14 +99,25 @@ export function DiscoverDish({ onAddToMenu }: DiscoverDishProps) {
   };
 
   const handleModifyRecipe = (recipe: Recipe) => {
-    toast({
-      title: "Chef Modificador",
-      description: "Abrindo modificador de receitas premium...",
-    });
+    setShowChefModifier(true);
+  };
+
+  const handleRecipeModified = (newRecipe: Recipe) => {
+    setDiscoveredRecipe(newRecipe);
+    setDishName(newRecipe.name);
   };
 
   return (
     <div className="page-enter">
+      {/* Chef Modifier Modal */}
+      {showChefModifier && discoveredRecipe && (
+        <ChefModifierModal
+          recipe={discoveredRecipe}
+          onClose={() => setShowChefModifier(false)}
+          onRecipeModified={handleRecipeModified}
+        />
+      )}
+
       {/* Hands-Free Mode */}
       {showHandsFree && discoveredRecipe && (
         <HandsFreeMode

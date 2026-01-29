@@ -1,19 +1,24 @@
 import { useState } from "react";
-import { Sparkles, Camera, Utensils, CalendarCheck, ShoppingBag, Mail, Loader2 } from "lucide-react";
+import { Sparkles, Camera, Utensils, CalendarCheck, ShoppingBag, Mail, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import chefImage from "@/assets/chef-scanning.jpg";
-import { checkSubscription } from "@/lib/api/checkSubscription";
+import { supabase } from "@/integrations/supabase/client";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 interface PaywallProps {
   onUnlock: () => void;
 }
 
+type Step = "email" | "code";
+
 const Paywall = ({ onUnlock }: PaywallProps) => {
   const [selectedPlan, setSelectedPlan] = useState<"weekly" | "annual">("annual");
   const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("email");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   const benefits = [
@@ -23,35 +28,67 @@ const Paywall = ({ onUnlock }: PaywallProps) => {
     { icon: ShoppingBag, text: "Lista de Compras Inteligente" },
   ];
 
-  const handleCheckAccess = async () => {
-    if (!email.trim()) {
-      toast.error("Por favor, insira seu email");
+  const handleSendCode = async () => {
+    if (!email.trim() || !email.includes("@")) {
+      toast.error("Por favor, insira um email válido");
       return;
     }
 
     setLoading(true);
     try {
-      const subscription = await checkSubscription(email);
+      const { data, error } = await supabase.functions.invoke("send-verification-code", {
+        body: { email: email.toLowerCase().trim() },
+      });
 
-      if (subscription && subscription.hasAccess) {
-        localStorage.setItem("chef-ai-email", email.toLowerCase().trim());
-        localStorage.setItem("chef-ai-plan", subscription.plan);
-        toast.success(`Bem-vindo! Seu plano ${subscription.plan.toUpperCase()} está ativo.`);
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success("Código enviado! Verifique seu email.");
+      setStep("code");
+    } catch (error) {
+      console.error("Error sending code:", error);
+      toast.error("Erro ao enviar código. Verifique se seu email está correto.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (code.length !== 6) {
+      toast.error("Digite o código de 6 dígitos");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-code", {
+        body: { 
+          email: email.toLowerCase().trim(),
+          code,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.success && data?.user) {
+        localStorage.setItem("chef-ai-email", data.user.email);
+        localStorage.setItem("chef-ai-plan", data.user.plan);
+        localStorage.setItem("chef-ai-unlocked", "true");
+        toast.success(`Bem-vindo! Seu plano ${data.user.plan.toUpperCase()} está ativo.`);
         onUnlock();
-      } else if (subscription && !subscription.hasAccess) {
-        if (subscription.status === "cancelled") {
-          toast.error("Sua assinatura foi cancelada. Por favor, renove seu plano.");
-        } else if (subscription.status === "overdue") {
-          toast.error("Sua assinatura está atrasada. Por favor, regularize o pagamento.");
-        } else {
-          toast.error("Você não possui um plano ativo. Por favor, adquira um plano.");
-        }
-      } else {
-        toast.error("Email não encontrado. Por favor, adquira um plano para acessar o ChefAI.");
       }
     } catch (error) {
-      console.error("Error checking subscription:", error);
-      toast.error("Erro ao verificar assinatura. Tente novamente.");
+      console.error("Error verifying code:", error);
+      toast.error("Erro ao verificar código. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -59,8 +96,17 @@ const Paywall = ({ onUnlock }: PaywallProps) => {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleCheckAccess();
+      if (step === "email") {
+        handleSendCode();
+      } else {
+        handleVerifyCode();
+      }
     }
+  };
+
+  const handleResendCode = () => {
+    setCode("");
+    handleSendCode();
   };
 
   return (
@@ -75,7 +121,6 @@ const Paywall = ({ onUnlock }: PaywallProps) => {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
           
-          {/* Floating card on image */}
           <div className="absolute bottom-8 left-4 right-4">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
               <p className="text-white text-sm leading-relaxed">
@@ -109,7 +154,6 @@ const Paywall = ({ onUnlock }: PaywallProps) => {
 
           {/* Pricing Plans */}
           <div className="space-y-3 pt-2">
-            {/* Weekly Plan */}
             <button
               onClick={() => setSelectedPlan("weekly")}
               className={`w-full p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
@@ -124,7 +168,6 @@ const Paywall = ({ onUnlock }: PaywallProps) => {
               </div>
             </button>
 
-            {/* Annual Plan */}
             <button
               onClick={() => setSelectedPlan("annual")}
               className={`w-full p-4 rounded-2xl border-2 transition-all duration-200 text-left relative ${
@@ -145,13 +188,13 @@ const Paywall = ({ onUnlock }: PaywallProps) => {
             </button>
           </div>
 
-          {/* Email Input */}
-          <div className="space-y-2 pt-2">
-            <Label htmlFor="email" className="text-foreground font-medium">
-              Já é assinante? Insira seu email:
-            </Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
+          {/* Email Step */}
+          {step === "email" && (
+            <div className="space-y-4 pt-2">
+              <Label htmlFor="email" className="text-foreground font-medium">
+                Já é assinante? Insira seu email:
+              </Label>
+              <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   id="email"
@@ -163,27 +206,91 @@ const Paywall = ({ onUnlock }: PaywallProps) => {
                   className="pl-10 h-12 rounded-xl"
                 />
               </div>
-            </div>
-          </div>
 
-          {/* CTA Button */}
-          <Button
-            onClick={handleCheckAccess}
-            disabled={loading}
-            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-button"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Verificando...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 mr-2" />
-                ACESSAR CHEFAI
-              </>
-            )}
-          </Button>
+              <Button
+                onClick={handleSendCode}
+                disabled={loading}
+                className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-button"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Enviando código...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="w-5 h-5 mr-2" />
+                    ENVIAR CÓDIGO
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Code Step */}
+          {step === "code" && (
+            <div className="space-y-4 pt-2">
+              <div className="text-center space-y-2">
+                <Label className="text-foreground font-medium">
+                  Digite o código enviado para:
+                </Label>
+                <p className="text-primary font-semibold">{email}</p>
+              </div>
+
+              <div className="flex justify-center py-4">
+                <InputOTP
+                  value={code}
+                  onChange={setCode}
+                  maxLength={6}
+                  onKeyDown={handleKeyPress}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} className="w-12 h-14 text-xl" />
+                    <InputOTPSlot index={1} className="w-12 h-14 text-xl" />
+                    <InputOTPSlot index={2} className="w-12 h-14 text-xl" />
+                    <InputOTPSlot index={3} className="w-12 h-14 text-xl" />
+                    <InputOTPSlot index={4} className="w-12 h-14 text-xl" />
+                    <InputOTPSlot index={5} className="w-12 h-14 text-xl" />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              <Button
+                onClick={handleVerifyCode}
+                disabled={loading || code.length !== 6}
+                className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-button"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    ACESSAR CHEFAI
+                  </>
+                )}
+              </Button>
+
+              <div className="flex items-center justify-center gap-4 pt-2">
+                <button
+                  onClick={() => setStep("email")}
+                  className="text-muted-foreground text-sm hover:underline"
+                >
+                  Trocar email
+                </button>
+                <span className="text-muted-foreground">•</span>
+                <button
+                  onClick={handleResendCode}
+                  disabled={loading}
+                  className="text-primary text-sm font-medium hover:underline disabled:opacity-50"
+                >
+                  Reenviar código
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Disclaimer */}
           <p className="text-center text-sm text-muted-foreground">
