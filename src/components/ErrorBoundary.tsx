@@ -2,6 +2,8 @@ import React, { Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
+const isDev = import.meta.env.DEV;
+
 interface Props {
   children: ReactNode;
 }
@@ -42,9 +44,7 @@ class ErrorBoundary extends Component<Props, State> {
               <AlertTriangle className="w-8 h-8 text-destructive" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-foreground">
-                Algo deu errado
-              </h1>
+              <h1 className="text-2xl font-bold text-foreground">Algo deu errado</h1>
               <p className="text-muted-foreground">
                 Ocorreu um erro inesperado. Por favor, tente recarregar a página.
               </p>
@@ -58,7 +58,8 @@ class ErrorBoundary extends Component<Props, State> {
                 Recarregar
               </Button>
             </div>
-            {process.env.NODE_ENV === "development" && this.state.error && (
+
+            {isDev && this.state.error && (
               <div className="mt-6 p-4 bg-muted rounded-lg text-left">
                 <p className="text-xs font-mono text-destructive break-all">
                   {this.state.error.toString()}
